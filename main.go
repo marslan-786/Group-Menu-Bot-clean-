@@ -1863,14 +1863,7 @@ func sendOwner(client *whatsmeow.Client, v *events.Message) {
 	}
 	
 	
-╔═════════════════════════╗
-║ 🎯 LID OWNER CHECK (STRICT)
-╠═════════════════════════╣
-║ 👤 Sender LID   : %s
-║ 🆔 Bot LID DB   : %s
-║ ✅ Verification : %v
-╚═════════════════════════╝
-`, senderLID, botLID, isMatch)
+	
 	
 	
 	msg := fmt.Sprintf(`╔═══════════════════╗
@@ -3040,9 +3033,6 @@ var (
 	globalClient *whatsmeow.Client 
 	ytCache         = make(map[string]YTSession) 
 	ytDownloadCache = make(map[string]YTState)
-    adminCache      = make(map[string]CachedAdminList) // GroupID -> AdminList
-    adminCacheMutex sync.RWMutex
-
 )
 
 
@@ -5131,15 +5121,20 @@ type SetupState struct {
 	BotMsgID string 
 }
 
-type CachedAdminList struct {
-    Admins    map[string]bool // صرف ایڈمنز کی لسٹ رکھیں گے
-    Timestamp time.Time       // کب ڈیٹا لیا تھا
-}
-
 
 var (
 	startTime  = time.Now()
 	data       BotData
 	dataMutex  sync.RWMutex
 	setupMap   = make(map[string]*SetupState)
+)
+
+type CachedAdminList struct {
+    Admins    map[string]bool // صرف ایڈمنز کی لسٹ رکھیں گے
+    Timestamp time.Time       // کب ڈیٹا لیا تھا
+}
+
+var (
+    adminCache      = make(map[string]CachedAdminList) // GroupID -> AdminList
+    adminCacheMutex sync.RWMutex
 )
