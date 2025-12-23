@@ -16,7 +16,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -38,14 +37,6 @@ import (
 
 
 func sendToolCard(client *whatsmeow.Client, v *events.Message, title, tool, info string) {
-	card := fmt.Sprintf(`╔══════════════════════╗
-║ ✨ %s ✨
-╠══════════════════════╣
-║ 🛠️ Tool: %s
-║ 🚦 Status: Active
-╠══════════════════════╣
-║ ⚡ Power: 32GB RAM (Live)
-╚══════════════════════╝
 %s`, strings.ToUpper(title), tool, info)
 	replyMessage(client, v, card)
 }
@@ -74,7 +65,7 @@ func handleAI(client *whatsmeow.Client, v *events.Message, query string, cmd str
 		apiUrl := fmt.Sprintf("https://text.pollinations.ai/%s?model=%s&system=%s", 
 			url.QueryEscape(query), model, url.QueryEscape(systemInstructions))
 
-		resp, err := http.Get(apiUrl)
+		_ , err := http.Get(apiUrl)
 		if err != nil { continue } 
 		
 		body, _ := io.ReadAll(resp.Body)
@@ -111,7 +102,7 @@ func handleImagine(client *whatsmeow.Client, v *events.Message, prompt string) {
 
 	imageUrl := fmt.Sprintf("https://image.pollinations.ai/prompt/%s?width=1024&height=1024&nologo=true", url.QueryEscape(prompt))
 	
-	resp, err := http.Get(imageUrl)
+	_ , err := http.Get(imageUrl)
 	if err != nil { return }
 	defer resp.Body.Close()
 	
@@ -148,16 +139,6 @@ func handleServerStats(client *whatsmeow.Client, v *events.Message) {
 	numCPU := runtime.NumCPU()
 	goRoutines := runtime.NumGoroutine()
 
-	stats := fmt.Sprintf(`╔══════════════════════╗
-║     🖥️ SYSTEM DASHBOARD    
-╠══════════════════════╣
-║ 🚀 RAM Used: %d MB
-║ 💎 Total RAM: 32 GB
-║ 🧬 System Memory: %d MB
-║ 🧠 CPU Cores: %d
-║ 🧵 Active Threads: %d
-║ 🟢 Status: Invincible
-╚══════════════════════╝`, used, sys, numCPU, goRoutines)
 	replyMessage(client, v, stats)
 }
 
@@ -231,7 +212,7 @@ func uploadToTempHost(data []byte, filename string) (string, error) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 	
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	_ , err := client.Do(req)
 	if err != nil { return "", err }
 	defer resp.Body.Close()
 
@@ -273,7 +254,7 @@ func handleRemini(client *whatsmeow.Client, v *events.Message) {
 
 	
 	apiURL := fmt.Sprintf("https://final-enhanced-production.up.railway.app/enhance?url=%s", url.QueryEscape(publicURL))
-	resp, err := http.Get(apiURL)
+	_ , err := http.Get(apiURL)
 	if err != nil {
 		replyMessage(client, v, "❌ AI Enhancement Engine is offline.")
 		return
@@ -344,7 +325,7 @@ func handleScreenshot(client *whatsmeow.Client, v *events.Message, targetUrl str
 	apiURL := fmt.Sprintf("https://api.screenshotmachine.com/?key=54be93&device=phone&dimension=1290x2796&url=%s", url.QueryEscape(targetUrl))
 
 	
-	resp, err := http.Get(apiURL)
+	_ , err := http.Get(apiURL)
 	if err != nil {
 		replyMessage(client, v, "❌ Screenshot engine failed to connect.")
 		return
@@ -397,7 +378,7 @@ func handleWeather(client *whatsmeow.Client, v *events.Message, city string) {
 	
 	
 	apiUrl := "https://api.wttr.in/" + url.QueryEscape(city) + "?format=3"
-	resp, _ := http.Get(apiUrl)
+	_ , _ := http.Get(apiUrl)
 	data, _ := io.ReadAll(resp.Body)
 	
 	msg := fmt.Sprintf("🌦️ *Live Weather Report:* \n\n%s\n\nGenerated via Satellite-Impossible", string(data))
@@ -446,11 +427,6 @@ func handleFancy(client *whatsmeow.Client, v *events.Message, text string) {
 	}
 
 	
-	card := "╔════════════════════════╗\n"
-	card += "║      ✨ *FANCY ENGINE V4* ✨     ║\n"
-	card += "╠════════════════════════╣\n"
-	card += "║ ⚡ *Power:* 32GB RAM VIP Server ║\n"
-	card += "╚════════════════════════╝\n\n"
 
 	
 	for i, style := range styles {
@@ -473,10 +449,8 @@ func handleFancy(client *whatsmeow.Client, v *events.Message, text string) {
 	}
 
 	
-	card += "\n╔════════════════════════╗\n"
 	card += "   👑 *ℑ𝔪𝔭𝔬𝔰𝔰𝔦𝔟𝔩𝔢 𝔅𝔬𝔱 𝔖𝔭𝔢𝔠𝔦𝔞𝔩*\n"
 	card += "   🔥 _Scientists are now burning..._\n"
-	card += "╚════════════════════════╝"
 
 	replyMessage(client, v, card)
 }
@@ -511,7 +485,7 @@ func handleGoogle(client *whatsmeow.Client, v *events.Message, query string) {
 	
 	searchUrl := "https://duckduckgo.com/html/?q=" + url.QueryEscape(query)
 	
-	resp, err := http.Get(searchUrl)
+	_ , err := http.Get(searchUrl)
 	if err != nil {
 		replyMessage(client, v, "❌ Search engine failed to respond.")
 		return
@@ -589,7 +563,7 @@ func handleToPTT(client *whatsmeow.Client, v *events.Message) {
 
 	
 	input := fmt.Sprintf("temp_in_%d", time.Now().UnixNano())
-	output := fmt.Sprintf("temp_out_%d.opus", time.Now().UnixNano()) 
+	_ := fmt.Sprintf("temp_out_%d.opus", time.Now().UnixNano()) 
 	os.WriteFile(input, data, 0644)
 
 	
@@ -658,7 +632,7 @@ func handleRemoveBG(client *whatsmeow.Client, v *events.Message) {
 	
 	
 	cmd := exec.Command("rembg", "i", inputPath, outputPath)
-	output, err := cmd.CombinedOutput()
+	_ , err := cmd.CombinedOutput()
 	
 	if err != nil {
 		replyMessage(client, v, fmt.Sprintf("❌ *Engine Error:* \n%s", string(output)))
@@ -711,7 +685,7 @@ func handleMega(client *whatsmeow.Client, v *events.Message, urlStr string) {
 		defer os.RemoveAll(tempDir)
 
 		cmd := exec.Command("megadl", "--no-progress", "--path="+tempDir, urlStr)
-		output, err := cmd.CombinedOutput()
+		_ , err := cmd.CombinedOutput()
 		
 		if err != nil {
 			replyMessage(client, v, "❌ *Mega Error:* Invalid link or file too large.\nDetails: " + string(output))
@@ -782,14 +756,6 @@ var ttCache = make(map[string]TTState)
 
 
 func sendPremiumCard(client *whatsmeow.Client, v *events.Message, title, site, info string) {
-	card := fmt.Sprintf(`╔══════════════════════╗
-║ ✨ %s DOWNLOADER
-╠══════════════════════╣
-║ 📝 Title: %s
-║ 🌐 Site: %s
-╠══════════════════════╣
-║ ⏳ Status: Processing...
-╚══════════════════════╝
 %s`, strings.ToUpper(site), title, site, info)
 	replyMessage(client, v, card)
 }
@@ -816,10 +782,10 @@ func downloadAndSend(client *whatsmeow.Client, v *events.Message, ytUrl, mode st
 	}
 
 	
-	fullCmd := strings.Join(args, " ")
+	_ := strings.Join(args, " ")
 
 	cmd := exec.Command("yt-dlp", args...)
-	output, err := cmd.CombinedOutput() 
+	_ , err := cmd.CombinedOutput() 
 	if err != nil {
 		replyMessage(client, v, "❌ Media processing failed. Check logs for details.")
 		return
@@ -914,7 +880,7 @@ func handleTikTok(client *whatsmeow.Client, v *events.Message, urlStr string) {
 
 func sendAudio(client *whatsmeow.Client, v *events.Message, audioURL string) {
 	
-	resp, err := http.Get(audioURL)
+	_ , err := http.Get(audioURL)
 	if err != nil {
 		return
 	}
@@ -971,12 +937,6 @@ func handleTikTokReply(client *whatsmeow.Client, v *events.Message, input string
 		delete(ttCache, senderID)
 
 	case "3":
-		infoMsg := fmt.Sprintf("╔═══════════════════╗\n"+
-			"║      ✨ TIKTOK INFO ✨     ║\n"+
-			"╠═══════════════════╣\n"+
-			"║ 📝 Title: %s\n"+
-			"║ 📊 Size: %.2f MB\n"+
-			"╚═══════════════════╝", state.Title, float64(state.Size)/(1024*1024))
 		replyMessage(client, v, infoMsg)
 		delete(ttCache, senderID)
 	}
@@ -1133,7 +1093,7 @@ func handleGithub(client *whatsmeow.Client, v *events.Message, urlStr string) {
 	zipURL := urlStr + "/zipball/HEAD"
 
 	
-	resp, err := http.Get(zipURL)
+	_ , err := http.Get(zipURL)
 	if err != nil || resp.StatusCode != 200 {
 		replyMessage(client, v, "❌ *GitHub Error:* Repo not found. Ensure it is public.")
 		return
@@ -1194,7 +1154,7 @@ func handleArchive(client *whatsmeow.Client, v *events.Message, urlStr string) {
 		req, _ := http.NewRequest("GET", urlStr, nil)
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 		
-		resp, err := clientHttp.Do(req)
+		_ , err := clientHttp.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			replyMessage(client, v, "❌ *Archive Error:* Could not reach the file. Link might be dead.")
 			return
@@ -1288,7 +1248,7 @@ func handleYTS(client *whatsmeow.Client, v *events.Message, query string) {
 	}
 	menuText += "│\n╰────────────────────╯"
 
-	resp, err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
+	_ , err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{Text: proto.String(menuText)},
 	})
 
@@ -1302,19 +1262,8 @@ func handleYTDownloadMenu(client *whatsmeow.Client, v *events.Message, ytUrl str
 	myID := getCleanID(client.Store.ID.User)
 	senderLID := v.Info.Sender.User
 
-	menu := `╔════════════════════╗
-║    🎬 VIDEO SELECTOR 
-╠════════════════════╣
-║ 1️⃣ 360p (Fast)
-║ 2️⃣ 720p (HD)
-║ 3️⃣ 1080p (FHD)
-║ 4️⃣ MP3 (Audio)
-║
-║ ⏳ Select an option by 
-║ replying to this card.
-╚════════════════════╝`
 
-	resp, err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
+	_ , err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{Text: proto.String(menu)},
 	})
 
@@ -1366,7 +1315,7 @@ func sendVideo(client *whatsmeow.Client, v *events.Message, videoURL, caption st
 }
 
 func sendDocument(client *whatsmeow.Client, v *events.Message, docURL, name, mime string) {
-	resp, err := http.Get(docURL); if err != nil { return }; defer resp.Body.Close()
+	_ , err := http.Get(docURL); if err != nil { return }; defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	up, _ := client.Upload(context.Background(), data, whatsmeow.MediaDocument)
 	client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
@@ -1558,7 +1507,6 @@ func processMessage(client *whatsmeow.Client, v *events.Message) {
 	case "listbots":
 		sendBotsList(client, v)
 	case "data":
-		replyMessage(client, v, "╔════════════════╗\n║ 📂 DATA STATUS\n╠════════════════╣\n║ ✅ System Active\n╚════════════════╝")
 	case "alwaysonline":
 		toggleAlwaysOnline(client, v)
 	case "autoread":
@@ -1866,14 +1814,6 @@ func sendOwner(client *whatsmeow.Client, v *events.Message) {
 	
 	
 	
-	msg := fmt.Sprintf(`╔═══════════════════╗
-║ %s OWNER VERIFICATION
-╠═══════════════════╣
-║ 🆔 Bot LID  : %s
-║ 👤 Your LID : %s
-╠═══════════════════╣
-║ 📊 Status: %s
-╚═══════════════════╝`, emoji, botLID, senderLID, status)
 	
 	replyMessage(client, v, msg)
 }
@@ -1881,18 +1821,11 @@ func sendOwner(client *whatsmeow.Client, v *events.Message) {
 func sendBotsList(client *whatsmeow.Client, v *events.Message) {
 	clientsMutex.RLock()
 	count := len(activeClients)
-	msg := fmt.Sprintf(`╔═══════════════════╗
-║ 📊 MULTI-BOT STATUS
-╠═══════════════════╣
-║ 🤖 Active Bots: %d
-╠═══════════════════╣`, count)
 	i := 1
 	for num := range activeClients {
-		msg += fmt.Sprintf("\n║ %d. %s", i, num)
 		i++
 	}
 	clientsMutex.RUnlock()
-	msg += "\n╚═══════════════════╝"
 	replyMessage(client, v, msg)
 }
 
@@ -1915,102 +1848,6 @@ func sendMenu(client *whatsmeow.Client, v *events.Message) {
 	currentMode := strings.ToUpper(s.Mode)
 	if !strings.Contains(v.Info.Chat.String(), "@g.us") { currentMode = "PRIVATE" }
 
-	menu := fmt.Sprintf(`╔══════════════════════╗
-║     ✨ %s ✨     
-╠══════════════════════╣
-║ 👋 *Assalam-o-Alaikum*
-║ 👑 *Owner:* %s              
-║ 🛡️ *Mode:* %s               
-║ ⏳ *Uptime:* %s             
-╠══════════════════════╣
-║                           
-║ ╭─── SOCIAL DOWNLOADERS ──╮
-║ │ 🔸 *%sfb* - Facebook Video
-║ │ 🔸 *%sig* - Instagram Reel/Post
-║ │ 🔸 *%stt* - TikTok No Watermark
-║ │ 🔸 *%stw* - Twitter/X Media
-║ │ 🔸 *%spin* - Pinterest Downloader
-║ │ 🔸 *%sthreads* - Threads Video
-║ │ 🔸 *%ssnap* - Snapchat Content
-║ │ 🔸 *%sreddit* - Reddit with Audio
-║ ╰───────────────────────╯
-║                             
-║ ╭─── VIDEO & STREAMS ────╮
-║ │ 🔸 *%syt* - <Link>
-║ │ 🔸 *%syts* - YouTube Search
-║ │ 🔸 *%stwitch* - Twitch Clips
-║ │ 🔸 *%sdm* - DailyMotion HQ
-║ │ 🔸 *%svimeo* - Vimeo Pro Video
-║ │ 🔸 *%srumble* - Rumble Stream
-║ │ 🔸 *%sbilibili* - Bilibili Anime
-║ │ 🔸 *%sdouyin* - Chinese TikTok
-║ │ 🔸 *%skwai* - Kwai Short Video
-║ │ 🔸 *%sbitchute* - BitChute Alt
-║ ╰───────────────────────╯
-║
-║ ╭─── MUSIC PLATFORMS ────╮
-║ │ 🔸 *%ssc* - SoundCloud Music
-║ │ 🔸 *%sspotify* - Spotify Track
-║ │ 🔸 *%sapple* - Apple Music
-║ │ 🔸 *%sdeezer* - Deezer Rippin
-║ │ 🔸 *%stidal* - Tidal HQ Audio
-║ │ 🔸 *%smixcloud* - DJ Mixsets
-║ │ 🔸 *%snapster* - Napster Legacy
-║ │ 🔸 *%sbandcamp* - Indie Music
-║ ╰───────────────────────╯
-║                             
-║ ╭────── GROUP ADMIN ──────╮
-║ │ 🔸 *%sadd* - Add New Member
-║ │ 🔸 *%sdemote* - Remove Admin
-║ │ 🔸 *%sgroup* - Group Settings
-║ │ 🔸 *%shidetag* - Hidden Mention
-║ │ 🔸 *%skick* - Remove Member    
-║ │ 🔸 *%spromote* - Make Admin
-║ │ 🔸 *%stagall* - Mention Everyone
-║ ╰───────────────────────╯
-║                             
-║ ╭──── BOT SETTINGS ─────╮
-║ │ 🔸 *%saddstatus* - Auto Status
-║ │ 🔸 *%salwaysonline* - Online 24/7
-║ │ 🔸 *%santilink* - Link Protection
-║ │ 🔸 *%santipic* - No Images Mode
-║ │ 🔸 *%santisticker* - No Stickers
-║ │ 🔸 *%santivideo* - No Video Mode
-║ │ 🔸 *%sautoreact* - Automatic React
-║ │ 🔸 *%sautoread* - Blue Tick Mark
-║ │ 🔸 *%sautostatus* - Status View
-║ │ 🔸 *%sdelstatus* - Remove Status
-║ │ 🔸 *%smode* - Private/Public
-║ │ 🔸 *%sstatusreact* - React Status
-║ ╰────────────────────────╯
-║                             
-║ ╭────── AI & TOOLS ─────────╮
-║ │ 🔸 *%sstats* - Server Dashboard
-║ │ 🔸 *%sspeed* - Internet Speed
-║ │ 🔸 *%sss* - Web Screenshot
-║ │ 🔸 *%sai* - Artificial Intelligence
-║ │ 🔸 *%sask* - Ask Questions
-║ │ 🔸 *%sgpt* - GPT 4o Model
-║ │ 🔸 *%simg* - Image Generator 
-║ │ 🔸 *%sgoogle* - Fast Search
-║ │ 🔸 *%sweather* - Climate Info
-║ │ 🔸 *%sremini* - HD Image Upscaler
-║ │ 🔸 *%sremovebg* - Background Eraser
-║ │ 🔸 *%sfancy* - Stylish Text
-║ │ 🔸 *%stoptt* - Convert to Audio
-║ │ 🔸 *%svv* - ViewOnce Bypass
-║ │ 🔸 *%ssticker* - Image to Sticker
-║ │ 🔸 *%stoimg* - Sticker to Image
-║ │ 🔸 *%stogif* - Sticker To Gif
-║ │ 🔸 *%stovideo* - Sticker to Video
-║ │ 🔸 *%sgit* - GitHub Downloader
-║ │ 🔸 *%sarchive* - Internet Archive
-║ │ 🔸 *%smega* - Universal Downloader
-║ ╰────────────────────────╯
-║                           
-╠══════════════════════╣
-║ © 2025 Nothing is Impossible 
-╚══════════════════════╝`,
 		BOT_NAME, OWNER_NAME, currentMode, uptimeStr,
 		
 		p, p, p, p, p, p, p, p,
@@ -2033,15 +1870,6 @@ func sendPing(client *whatsmeow.Client, v *events.Message) {
 	time.Sleep(10 * time.Millisecond)
 	ms := time.Since(start).Milliseconds()
 	uptimeStr := getFormattedUptime()
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚡ PING STATUS
-╠════════════════╣
-║ 🚀 Speed: %d MS
-║ ⏱️ Uptime: %s
-║ 👑 Dev: %s
-╠═════════════════════╣
-║      🟢 System Running
-╚═════════════════════╝`, ms, uptimeStr, OWNER_NAME)
 	sendReplyMessage(client, v, msg)
 }
 
@@ -2050,15 +1878,6 @@ func sendID(client *whatsmeow.Client, v *events.Message) {
 	chat := v.Info.Chat.User
 	chatType := "Private"
 	if v.Info.IsGroup { chatType = "Group" }
-	msg := fmt.Sprintf(`╔════════════════╗
-║ 🆔 ID INFO
-╠════════════════╣
-║ 👤 User ID:
-║ `+"`%s`"+`
-║ 👥 Chat ID:
-║ `+"`%s`"+`
-║ 🏷️ Type: %s
-╚════════════════╝`, user, chat, chatType)
 	sendReplyMessage(client, v, msg)
 }
 
@@ -2135,7 +1954,6 @@ func getGroupSettings(id string) *GroupSettings {
 
 func handleSessionDelete(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !isOwner(client, v.Info.Sender) {
-		replyMessage(client, v, "╔═══════════════════╗\n║ 👑 OWNER ONLY      \n╠═══════════════════╣\n║ You don't have    \n║ permission.       \n╚═══════════════════╝")
 		return
 	}
 	if len(args) == 0 {
@@ -2165,7 +1983,6 @@ func handleSessionDelete(client *whatsmeow.Client, v *events.Message, args []str
 		return
 	}
 	device.Delete(context.Background())
-	msg := fmt.Sprintf("╔═══════════════════╗\n║ 🗑️ SESSION DELETED  \n╠═══════════════════╣\n║ Number: %s\n╚═══════════════════╝", targetNumber)
 	replyMessage(client, v, msg)
 }
 
@@ -2184,37 +2001,16 @@ func handleKick(client *whatsmeow.Client, v *events.Message, args []string) {
 
 func handleAdd(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !v.Info.IsGroup {
-		msg := `╔════════════════╗
-║ ❌ GROUP ONLY
-╠════════════════
-║ This command
-║ works only in
-║ group chats
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if len(args) == 0 {
-		msg := `╔════════════════╗
-║ ⚠️ INVALID
-╠════════════════
-║ Usage:
-║ .add <number>
-║
-║ Example:
-║ .add 92300xxx
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2223,12 +2019,6 @@ func handleAdd(client *whatsmeow.Client, v *events.Message, args []string) {
 	jid, _ := types.ParseJID(num + "@s.whatsapp.net")
 	client.UpdateGroupParticipants(context.Background(), v.Info.Chat, []types.JID{jid}, whatsmeow.ParticipantChangeAdd)
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ✅ ADDED
-╠════════════════
-║ Number: %s
-║ Added to group
-╚════════════════`, args[0])
 
 	replyMessage(client, v, msg)
 }
@@ -2243,44 +2033,25 @@ func handleDemote(client *whatsmeow.Client, v *events.Message, args []string) {
 
 func handleTagAll(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !v.Info.IsGroup {
-		msg := `╔════════════════╗
-║ ❌ GROUP ONLY
-╠════════════════
-║ This command
-║ works only in
-║ group chats
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	info, _ := client.GetGroupInfo(context.Background(), v.Info.Chat)
 	mentions := []string{}
-	out := "╔════════════════╗\n"
-	out += "║ 📣 TAG ALL\n"
-	out += "╠════════════════\n"
 
 	if len(args) > 0 {
-		out += "║ 💬 " + strings.Join(args, " ") + "\n"
 	}
 
 	for _, p := range info.Participants {
 		mentions = append(mentions, p.JID.String())
-		out += "║ @" + p.JID.User + "\n"
 	}
 
-	out += fmt.Sprintf("║ 👥 Total: %d\n", len(info.Participants))
-	out += "╚════════════════"
 
 	client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{
@@ -2296,23 +2067,11 @@ func handleTagAll(client *whatsmeow.Client, v *events.Message, args []string) {
 
 func handleHideTag(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !v.Info.IsGroup {
-		msg := `╔════════════════╗
-║ ❌ GROUP ONLY
-╠════════════════
-║ This command
-║ works only in
-║ group chats
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2341,45 +2100,16 @@ func handleHideTag(client *whatsmeow.Client, v *events.Message, args []string) {
 
 func handleGroup(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !v.Info.IsGroup {
-		msg := `╔════════════════╗
-║ ❌ GROUP ONLY
-╠════════════════
-║ This command
-║ works only in
-║ group chats
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if len(args) == 0 {
-		msg := `╔════════════════╗
-║ ⚙️ SETTINGS
-╠════════════════
-║ Commands:
-║
-║ 🔒 .group close
-║    Close group
-║
-║ 🔓 .group open
-║    Open group
-║
-║ 🔗 .group link
-║    Get link
-║
-║ 🔄 .group revoke
-║    Revoke link
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2387,55 +2117,21 @@ func handleGroup(client *whatsmeow.Client, v *events.Message, args []string) {
 	switch strings.ToLower(args[0]) {
 	case "close":
 		client.SetGroupAnnounce(context.Background(), v.Info.Chat, true)
-		msg := `╔════════════════╗
-║ 🔒 CLOSED
-╠════════════════
-║ Only admins
-║ can send now
-╚════════════════`
 		replyMessage(client, v, msg)
 
 	case "open":
 		client.SetGroupAnnounce(context.Background(), v.Info.Chat, false)
-		msg := `╔════════════════╗
-║ 🔓 OPENED
-╠════════════════
-║ All members
-║ can send now
-╚════════════════`
 		replyMessage(client, v, msg)
 
 	case "link":
 		code, _ := client.GetGroupInviteLink(context.Background(), v.Info.Chat, false)
-		msg := fmt.Sprintf(`╔════════════════╗
-║ 🔗 LINK
-╠════════════════
-║ https://chat.
-║ whatsapp.com/
-║ %s
-╚════════════════`, code)
 		replyMessage(client, v, msg)
 
 	case "revoke":
 		client.GetGroupInviteLink(context.Background(), v.Info.Chat, true)
-		msg := `╔════════════════╗
-║ 🔄 REVOKED
-╠════════════════
-║ Old link is
-║ now invalid
-║ Use .group link
-║ for new one
-╚════════════════`
 		replyMessage(client, v, msg)
 
 	default:
-		msg := `╔════════════════╗
-║ ❌ INVALID
-╠════════════════
-║ Use: close,
-║ open, link, or
-║ revoke
-╚════════════════`
 		replyMessage(client, v, msg)
 	}
 }
@@ -2446,23 +2142,11 @@ func handleDelete(client *whatsmeow.Client, v *events.Message) {
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if v.Message.ExtendedTextMessage == nil {
-		msg := `╔════════════════╗
-║ ⚠️ INVALID
-╠════════════════
-║ Reply to a
-║ message to
-║ delete it
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2474,33 +2158,16 @@ func handleDelete(client *whatsmeow.Client, v *events.Message) {
 
 	client.RevokeMessage(context.Background(), v.Info.Chat, *ctx.StanzaID)
 
-	msg := `╔════════════════╗
-║ 🗑️ DELETED
-╠════════════════
-║ ✅ Removed
-╚════════════════`
 	replyMessage(client, v, msg)
 }
 
 func groupAction(client *whatsmeow.Client, v *events.Message, args []string, action string) {
 	if !v.Info.IsGroup {
-		msg := `╔════════════════╗
-║ ❌ GROUP ONLY
-╠════════════════
-║ This command
-║ works only in
-║ group chats
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if !isAdmin(client, v.Info.Chat, v.Info.Sender) && !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ DENIED
-╠════════════════
-║ 🔒 Admin Only
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2514,11 +2181,6 @@ func groupAction(client *whatsmeow.Client, v *events.Message, args []string, act
 		}
 		jid, err := types.ParseJID(num)
 		if err != nil {
-			msg := `╔════════════════╗
-║ ❌ INVALID
-╠════════════════
-║ Invalid number
-╚════════════════`
 			replyMessage(client, v, msg)
 			return
 		}
@@ -2535,23 +2197,11 @@ func groupAction(client *whatsmeow.Client, v *events.Message, args []string, act
 	}
 
 	if targetJID.User == "" {
-		msg := `╔════════════════╗
-║ ⚠️ NO USER
-╠════════════════
-║ Mention or
-║ reply to user
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if targetJID.User == v.Info.Sender.User && action == "remove" {
-		msg := `╔════════════════╗
-║ ❌ INVALID
-╠════════════════
-║ Cannot kick
-║ yourself
-╚════════════════`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -2576,12 +2226,6 @@ func groupAction(client *whatsmeow.Client, v *events.Message, args []string, act
 
 	client.UpdateGroupParticipants(context.Background(), v.Info.Chat, []types.JID{targetJID}, participantChange)
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ %s %s
-╠════════════════
-║ User: @%s
-║ ✅ Done
-╚════════════════`, actionEmoji, strings.ToUpper(actionText), targetJID.User)
 
 	client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{
@@ -2684,7 +2328,7 @@ func runLIDExtractor() error {
 	if err := cmd.Run(); err != nil {
 	}
 
-	duration := time.Since(startTime).Seconds()
+	_ := time.Since(startTime).Seconds()
 
 	return nil
 }
@@ -2717,14 +2361,14 @@ func loadLIDData() error {
 
 	
 	lidCache = make(map[string]string)
-	for phone, botInfo := range lidDB.Bots {
+	for _ , botInfo := range lidDB.Bots {
 		lidCache[phone] = botInfo.LID
 	}
 
 
 	
 	if len(lidCache) > 0 {
-		for phone, lid := range lidCache {
+		for _ , _ := range lidCache {
 		}
 	}
 
@@ -2826,7 +2470,7 @@ func getLIDForPhone(phone string) string {
 	defer lidCacheMutex.RUnlock()
 
 	cleanPhone := getCleanNumber(phone)
-	if lid, exists := lidCache[cleanPhone]; exists {
+	if _ , exists := lidCache[cleanPhone]; exists {
 		return lid
 	}
 	return ""
@@ -2875,17 +2519,6 @@ func sendOwnerStatus(client *whatsmeow.Client, v *events.Message) {
 		icon = "👑"
 	}
 
-	msg := fmt.Sprintf(`╔════════════════════╗
-║ %s OWNER STATUS
-╠════════════════════╣
-║ 📱 Bot: %s
-║ 🆔 LID: %s
-║ 👤 You: %s
-║ 
-║ %s
-╠════════════════════╣
-║ 🔐 LID-Based Verification
-╚════════════════════╝`,
 		icon, botPhone, botLID, senderPhone, status)
 
 	sendReplyMessage(client, v, msg)
@@ -3110,7 +2743,7 @@ func main() {
 	<-stop
 
 	clientsMutex.Lock()
-	for id, activeClient := range activeClients {
+	for _ , activeClient := range activeClients {
 		activeClient.Disconnect()
 	}
 	clientsMutex.Unlock()
@@ -3228,7 +2861,7 @@ func handleDelAllAPI(w http.ResponseWriter, r *http.Request) {
 	
 	
 	clientsMutex.Lock()
-	for id, c := range activeClients {
+	for _ , c := range activeClients {
 		c.Disconnect()
 		delete(activeClients, id)
 	}
@@ -3710,22 +3343,11 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 		
 		_, err := client.SendMessage(context.Background(), v.Info.Chat, client.BuildRevoke(v.Info.Chat, v.Info.Sender, v.Info.ID))
 		if err != nil {
-			msg := `╔════════════════╗
-║ ❌ DELETE FAILED
-╠════════════════╣
-║ Bot needs admin
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
 
 
-		msg := fmt.Sprintf(`╔════════════════╗
-║ 🚫 DELETED
-╠════════════════╣
-║ Reason: %s
-║ User: @%s
-╚════════════════╝`, reason, v.Info.Sender.User)
 		
 		senderStr := v.Info.Sender.String()
 		client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
@@ -3743,11 +3365,6 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 		
 		_, err := client.SendMessage(context.Background(), v.Info.Chat, client.BuildRevoke(v.Info.Chat, v.Info.Sender, v.Info.ID))
 		if err != nil {
-			msg := `╔════════════════╗
-║ ❌ DELETE FAILED
-╠════════════════╣
-║ Bot needs admin
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
@@ -3757,23 +3374,11 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 			[]types.JID{v.Info.Sender}, whatsmeow.ParticipantChangeRemove)
 		
 		if err != nil {
-			msg := `╔════════════════╗
-║ ⚠️ KICK FAILED
-╠════════════════╣
-║ Bot needs admin
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
 
 		
-		msg := fmt.Sprintf(`╔════════════════╗
-║ 👢 KICKED
-╠════════════════╣
-║ Reason: %s
-║ User: @%s
-║ Action: Delete+Kick
-╚════════════════╝`, reason, v.Info.Sender.User)
 		
 		senderStr := v.Info.Sender.String()
 		client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
@@ -3793,11 +3398,6 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 		
 		_, err := client.SendMessage(context.Background(), v.Info.Chat, client.BuildRevoke(v.Info.Chat, v.Info.Sender, v.Info.ID))
 		if err != nil {
-			msg := `╔════════════════╗
-║ ❌ DELETE FAILED
-╠════════════════╣
-║ Bot needs admin
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
@@ -3808,11 +3408,6 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 				[]types.JID{v.Info.Sender}, whatsmeow.ParticipantChangeRemove)
 			
 			if err != nil {
-				msg := `╔════════════════╗
-║ ⚠️ KICK FAILED
-╠════════════════╣
-║ Bot needs admin
-╚════════════════╝`
 				replyMessage(client, v, msg)
 				return
 			}
@@ -3820,13 +3415,6 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 
 			delete(s.Warnings, senderKey)
 			
-			msg := fmt.Sprintf(`╔════════════════╗
-║ 🚫 KICKED
-╠════════════════╣
-║ User: @%s
-║ Warning: 3/3
-║ Kicked Out
-╚════════════════╝`, v.Info.Sender.User)
 			
 			senderStr := v.Info.Sender.String()
 			client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
@@ -3838,14 +3426,6 @@ func takeSecurityAction(client *whatsmeow.Client, v *events.Message, s *GroupSet
 				},
 			})
 		} else {
-			msg := fmt.Sprintf(`╔════════════════╗
-║ ⚠️ WARNING
-╠════════════════╣
-║ User: @%s
-║ Count: %d/3
-║ Reason: %s
-║ 3 = Kick
-╚════════════════╝`, v.Info.Sender.User, warnCount, reason)
 			
 			senderStr := v.Info.Sender.String()
 			client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
@@ -3894,7 +3474,6 @@ func onResponse(client *whatsmeow.Client, v *events.Message, choice string) {
 func startSecuritySetup(client *whatsmeow.Client, v *events.Message, secType string) {
 	
 	if !v.Info.IsGroup {
-		replyMessage(client, v, "╔════════════════╗\n║ ❌ GROUP ONLY\n╚════════════════╝")
 		return
 	}
 
@@ -3909,7 +3488,6 @@ func startSecuritySetup(client *whatsmeow.Client, v *events.Message, secType str
 		}
 	}
 	if !isAdmin && !isOwner(client, v.Info.Sender) {
-		replyMessage(client, v, "╔════════════════╗\n║ 👮 ADMIN ONLY\n╚════════════════╝")
 		return
 	}
 
@@ -3919,15 +3497,9 @@ func startSecuritySetup(client *whatsmeow.Client, v *events.Message, secType str
 	groupID := v.Info.Chat.String()
 	botUniqueLID := getBotLIDFromDB(client) 
 
-	msgText := fmt.Sprintf(`╔════════════════╗
-║ 🛡️ %s (1/2)
-╠════════════════╣
-║ Allow Admins?
-║ 1️⃣ YES | 2️⃣ NO
-╚════════════════╝`, strings.ToUpper(secType))
 
 	
-	resp, err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
+	_ , err := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 		ExtendedTextMessage: &waProto.ExtendedTextMessage{Text: proto.String(msgText)},
 	})
 
@@ -3989,15 +3561,8 @@ func handleSetupResponse(client *whatsmeow.Client, v *events.Message) {
 		delete(setupMap, quotedID) 
 
 		state.Stage = 2
-		nextMsg := fmt.Sprintf(`╔════════════════╗
-║ ⚡ %s (2/2)
-╠════════════════╣
-║ 1️⃣ DELETE ONLY
-║ 2️⃣ DELETE + KICK
-║ 3️⃣ DELETE + WARN
-╚════════════════╝`, strings.ToUpper(state.Type))
 
-		resp, _ := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
+		_ , _ := client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
 			ExtendedTextMessage: &waProto.ExtendedTextMessage{Text: proto.String(nextMsg)},
 		})
 		
@@ -4021,12 +3586,6 @@ func handleSetupResponse(client *whatsmeow.Client, v *events.Message) {
 		delete(setupMap, quotedID) 
 
 		adminBypass := "YES ✅"; if !s.AntilinkAdmin { adminBypass = "NO ❌" }
-		finalMsg := fmt.Sprintf(`╔════════════════╗
-║ ✅ %s ENABLED
-╠════════════════╣
-║ Admin Bypass: %s
-║ Action: %s
-╚════════════════╝`, strings.ToUpper(state.Type), adminBypass, actionText)
 
 		replyMessage(client, v, finalMsg)
 	}
@@ -4079,12 +3638,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 
 			
 			if sender.User == left.User {
-				msg := fmt.Sprintf(`╔════════════════╗
-║ 👋 MEMBER LEFT
-╠════════════════╣
-║ 👤 User: @%s
-║ 📉 Status: Self Leave
-╚════════════════╝`, left.User)
 
 				client.SendMessage(context.Background(), v.JID, &waProto.Message{
 					ExtendedTextMessage: &waProto.ExtendedTextMessage{
@@ -4096,12 +3649,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 				})
 			} else {
 				
-				msg := fmt.Sprintf(`╔════════════════╗
-║ 👢 MEMBER KICKED
-╠════════════════╣
-║ 👤 User: @%s
-║ 👮 By: @%s
-╚════════════════╝`, left.User, sender.User)
 
 				client.SendMessage(context.Background(), v.JID, &waProto.Message{
 					ExtendedTextMessage: &waProto.ExtendedTextMessage{
@@ -4120,12 +3667,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 	
 	if v.Promote != nil && len(v.Promote) > 0 {
 		for _, promoted := range v.Promote {
-			msg := fmt.Sprintf(`╔════════════════╗
-║ 👑 PROMOTED
-╠════════════════╣
-║ 👤 User: @%s
-║ 🎉 Congrats!
-╚════════════════╝`, promoted.User)
 
 			promotedStr := promoted.String()
 			client.SendMessage(context.Background(), v.JID, &waProto.Message{
@@ -4142,12 +3683,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 	
 	if v.Demote != nil && len(v.Demote) > 0 {
 		for _, demoted := range v.Demote {
-			msg := fmt.Sprintf(`╔════════════════╗
-║ 👤 DEMOTED
-╠════════════════╣
-║ 👤 User: @%s
-║ 📉 Rank Removed
-╚════════════════╝`, demoted.User)
 
 			demotedStr := demoted.String()
 			client.SendMessage(context.Background(), v.JID, &waProto.Message{
@@ -4164,12 +3699,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 	
 	if v.Join != nil && len(v.Join) > 0 {
 		for _, joined := range v.Join {
-			msg := fmt.Sprintf(`╔════════════════╗
-║ 👋 JOINED
-╠════════════════╣
-║ 👤 User: @%s
-║ 🎉 Welcome!
-╚════════════════╝`, joined.User)
 
 			joinedStr := joined.String()
 			client.SendMessage(context.Background(), v.JID, &waProto.Message{
@@ -4188,11 +3717,6 @@ func handleGroupInfoChange(client *whatsmeow.Client, v *events.GroupInfo) {
 
 func toggleAlwaysOnline(client *whatsmeow.Client, v *events.Message) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4210,24 +3734,12 @@ func toggleAlwaysOnline(client *whatsmeow.Client, v *events.Message) {
 	}
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚙️ ALWAYS ONLINE
-╠════════════════╣
-║ 📊 Status: %s
-║ 🔄 State: %s
-║ ✅ Updated
-╚════════════════╝`, status, statusText)
 
 	replyMessage(client, v, msg)
 }
 
 func toggleAutoRead(client *whatsmeow.Client, v *events.Message) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4242,24 +3754,12 @@ func toggleAutoRead(client *whatsmeow.Client, v *events.Message) {
 	}
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚙️ AUTO READ
-╠════════════════╣
-║ 📊 Status: %s
-║ 🔄 State: %s
-║ ✅ Updated
-╚════════════════╝`, status, statusText)
 
 	replyMessage(client, v, msg)
 }
 
 func toggleAutoReact(client *whatsmeow.Client, v *events.Message) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4274,24 +3774,12 @@ func toggleAutoReact(client *whatsmeow.Client, v *events.Message) {
 	}
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚙️ AUTO REACT
-╠════════════════╣
-║ 📊 Status: %s
-║ 🔄 State: %s
-║ ✅ Updated
-╚════════════════╝`, status, statusText)
 
 	replyMessage(client, v, msg)
 }
 
 func toggleAutoStatus(client *whatsmeow.Client, v *events.Message) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4306,24 +3794,12 @@ func toggleAutoStatus(client *whatsmeow.Client, v *events.Message) {
 	}
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚙️ AUTO STATUS
-╠════════════════╣
-║ 📊 Status: %s
-║ 🔄 State: %s
-║ ✅ Updated
-╚════════════════╝`, status, statusText)
 
 	replyMessage(client, v, msg)
 }
 
 func toggleStatusReact(client *whatsmeow.Client, v *events.Message) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4338,35 +3814,17 @@ func toggleStatusReact(client *whatsmeow.Client, v *events.Message) {
 	}
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ⚙️ STATUS REACT
-╠════════════════╣
-║ 📊 Status: %s
-║ 🔄 State: %s
-║ ✅ Updated
-╚════════════════╝`, status, statusText)
 
 	replyMessage(client, v, msg)
 }
 
 func handleAddStatus(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if len(args) < 1 {
-		msg := `╔════════════════╗
-║ ⚠️ INVALID FORMAT
-╠════════════════╣
-║ 📝 .addstatus <num>
-║ 💡 .addstatus 923xx
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4376,34 +3834,17 @@ func handleAddStatus(client *whatsmeow.Client, v *events.Message, args []string)
 	data.StatusTargets = append(data.StatusTargets, num)
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ✅ TARGET ADDED
-╠════════════════╣
-║ 📱 %s
-║ 📊 Total: %d
-╚════════════════╝`, num, len(data.StatusTargets))
 
 	replyMessage(client, v, msg)
 }
 
 func handleDelStatus(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if len(args) < 1 {
-		msg := `╔════════════════╗
-║ ⚠️ INVALID FORMAT
-╠════════════════╣
-║ 📝 .delstatus <num>
-║ 💡 .delstatus 923xx
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4423,19 +3864,8 @@ func handleDelStatus(client *whatsmeow.Client, v *events.Message, args []string)
 	dataMutex.Unlock()
 
 	if found {
-		msg := fmt.Sprintf(`╔════════════════╗
-║ ✅ TARGET REMOVED
-╠════════════════╣
-║ 📱 %s
-║ 📊 Remaining: %d
-╚════════════════╝`, num, len(data.StatusTargets))
 		replyMessage(client, v, msg)
 	} else {
-		msg := `╔════════════════╗
-║ ❌ NOT FOUND
-╠════════════════╣
-║ Number not in list
-╚════════════════╝`
 		replyMessage(client, v, msg)
 	}
 }
@@ -4450,46 +3880,23 @@ func handleListStatus(client *whatsmeow.Client, v *events.Message) {
 	dataMutex.RUnlock()
 
 	if len(targets) == 0 {
-		msg := `╔════════════════╗
-║ 📭 NO TARGETS
-╠════════════════╣
-║ Use .addstatus
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
 
-	msg := "╔════════════════╗\n"
-	msg += "║ 📜 STATUS TARGETS\n"
-	msg += "╠════════════════╣\n"
 	for i, t := range targets {
-		msg += fmt.Sprintf("║ %d. %s\n", i+1, t)
 	}
-	msg += fmt.Sprintf("║ 📊 Total: %d\n", len(targets))
-	msg += "╚════════════════╝"
 
 	replyMessage(client, v, msg)
 }
 
 func handleSetPrefix(client *whatsmeow.Client, v *events.Message, args []string) {
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
 
 	if len(args) < 1 {
-		msg := `╔════════════════╗
-║ ⚠️ INVALID FORMAT
-╠════════════════╣
-║ 📝 .setprefix <sym>
-║ 💡 .setprefix .
-║ 💡 .setprefix !
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4499,12 +3906,6 @@ func handleSetPrefix(client *whatsmeow.Client, v *events.Message, args []string)
 	data.Prefix = newPrefix
 	dataMutex.Unlock()
 
-	msg := fmt.Sprintf(`╔════════════════╗
-║ ✅ PREFIX UPDATED
-╠════════════════╣
-║ 🔧 New: %s
-║ 💡 Ex: %smenu
-╚════════════════╝`, newPrefix, newPrefix)
 
 	replyMessage(client, v, msg)
 }
@@ -4512,11 +3913,6 @@ func handleSetPrefix(client *whatsmeow.Client, v *events.Message, args []string)
 func handleMode(client *whatsmeow.Client, v *events.Message, args []string) {
 	
 	if !isOwner(client, v.Info.Sender) {
-		msg := `╔════════════════╗
-║ ❌ ACCESS DENIED
-╠════════════════╣
-║ 🔒 Owner Only
-╚════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4524,16 +3920,6 @@ func handleMode(client *whatsmeow.Client, v *events.Message, args []string) {
 	
 	if !v.Info.IsGroup {
 		if len(args) < 1 {
-			msg := `╔════════════════╗
-║ ⚙️ GROUP MODE
-╠════════════════╣
-║ 1️⃣ public - All
-║ 2️⃣ private - Off
-║ 3️⃣ admin - Admin
-║ 📝 .mode <type>
-║ 💡 Use in group
-║    to change mode
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
@@ -4542,26 +3928,12 @@ func handleMode(client *whatsmeow.Client, v *events.Message, args []string) {
 	
 	if v.Info.IsGroup {
 		if len(args) < 1 {
-			msg := `╔════════════════╗
-║ ⚙️ GROUP MODE
-╠════════════════╣
-║ 1️⃣ public - All
-║ 2️⃣ private - Off
-║ 3️⃣ admin - Admin
-║ 📝 .mode <type>
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
 
 		mode := strings.ToLower(args[0])
 		if mode != "public" && mode != "private" && mode != "admin" {
-			msg := `╔════════════════╗
-║ ❌ INVALID MODE
-╠════════════════╣
-║ Use: public/
-║ private/admin
-╚════════════════╝`
 			replyMessage(client, v, msg)
 			return
 		}
@@ -4580,13 +3952,6 @@ func handleMode(client *whatsmeow.Client, v *events.Message, args []string) {
 			modeDesc = "Admin only"
 		}
 
-		msg := fmt.Sprintf(`╔════════════════╗
-║ ✅ MODE CHANGED
-╠════════════════╣
-║ 🛡️ %s
-║ 📝 %s
-║ ✅ Updated
-╚════════════════╝`, strings.ToUpper(mode), modeDesc)
 
 		replyMessage(client, v, msg)
 	}
@@ -4599,11 +3964,6 @@ func handleReadAllStatus(client *whatsmeow.Client, v *events.Message) {
 
 	client.MarkRead(context.Background(), []types.MessageID{v.Info.ID}, time.Now(), types.NewJID("status@broadcast", types.DefaultUserServer), v.Info.Sender, types.ReceiptTypeRead)
 
-	msg := `╔════════════════╗
-║ ✅ STATUSES READ
-╠════════════════╣
-║ All marked read
-╚════════════════╝`
 
 	replyMessage(client, v, msg)
 }
@@ -4632,7 +3992,7 @@ func handleToSticker(client *whatsmeow.Client, v *events.Message) {
 	react(client, v.Info.Chat, v.Info.ID, "✨")
 	data, _ := client.Download(context.Background(), media)
 	input := "temp_in"
-	output := "temp_out.webp"
+	_ := "temp_out.webp"
 	os.WriteFile(input, data, 0644)
 
 	
@@ -4679,7 +4039,7 @@ func handleToImg(client *whatsmeow.Client, v *events.Message) {
 	if err != nil { return }
 
 	input := fmt.Sprintf("in_%d.webp", time.Now().UnixNano())
-	output := fmt.Sprintf("out_%d.png", time.Now().UnixNano())
+	_ := fmt.Sprintf("out_%d.png", time.Now().UnixNano())
 	os.WriteFile(input, data, 0644)
 
 	
@@ -4748,7 +4108,7 @@ func handleToMedia(client *whatsmeow.Client, v *events.Message, isGif bool) {
 		"-t", "10",
 		outputMp4)
 	
-	outLog, err := cmd.CombinedOutput()
+	_ , err := cmd.CombinedOutput()
 	if err != nil {
 		replyMessage(client, v, "❌ Graphics Engine failed.")
 		os.Remove(inputWebP); os.Remove(tempGif)
@@ -4794,37 +4154,16 @@ func handleToMedia(client *whatsmeow.Client, v *events.Message, isGif bool) {
 func handleToURL(client *whatsmeow.Client, v *events.Message) {
 	react(client, v.Info.Chat, v.Info.ID, "🔗")
 	
-	msg := `╔══════════════════╗
-║  🔗 UPLOADING MEDIA       
-╠══════════════════╣
-║ ⏳ Uploading to server... 
-║         Please wait...           
-╚══════════════════╝`
 	replyMessage(client, v, msg)
 
 	d, err := downloadMedia(client, v.Message)
 	if err != nil {
-		errMsg := `╔═════════════════╗
-║  ❌ NO MEDIA FOUND       
-╠═══════════════════╣
-║ Reply to media to get URL
-╚═══════════════════╝`
 		replyMessage(client, v, errMsg)
 		return
 	}
 
 	uploadURL := uploadToCatbox(d)
 	
-	resultMsg := fmt.Sprintf(`╔═════════════════╗
-║  🔗 MEDIA UPLOADED        
-╠═════════════════╣
-║                           
-║  📎 *Direct Link:*        
-║  %s                       
-║                           
-║ ✅ *Successfully Uploaded*
-║                           
-╚═══════════════════╝`, uploadURL)
 
 	replyMessage(client, v, resultMsg)
 }
@@ -4843,17 +4182,6 @@ func handleTranslate(client *whatsmeow.Client, v *events.Message, args []string)
 	}
 
 	if t == "" {
-		msg := `╔══════════════╗
-║   🌍 TRANSLATOR            
-╠══════════════╣
-║                           
-║  Usage:                   
-║  .tr <text>               
-║                           
-║  Or reply to message with:
-║  .tr                      
-║                           
-╚═══════════════════╝`
 		replyMessage(client, v, msg)
 		return
 	}
@@ -4864,26 +4192,9 @@ func handleTranslate(client *whatsmeow.Client, v *events.Message, args []string)
 
 	if len(res) > 0 {
 		translated := res[0].([]interface{})[0].([]interface{})[0].(string)
-		msg := fmt.Sprintf(`╔═══════════════════╗
-║ 🌍 TRANSLATION RESULT    
-╠═══════════════════╣
-║                           
-║  📝 *Original:*           
-║  %s                       
-║                           
-║  📝 *Translated:*         
-║  %s                       
-║                           
-╚════════════════════╝`, t, translated)
 
 		replyMessage(client, v, msg)
 	} else {
-		errMsg := `╔══════════════════╗
-║ ❌ TRANSLATION FAILED    
-╠══════════════════╣
-║  Could not translate text 
-║  Please try again         
-╚══════════════════╝`
 		replyMessage(client, v, errMsg)
 	}
 }
@@ -5003,7 +4314,7 @@ func handleVV(client *whatsmeow.Client, v *events.Message) {
 	}
 
 	
-	resp, sendErr := client.SendMessage(ctx, v.Info.Chat, &finalMsg)
+	_ , sendErr := client.SendMessage(ctx, v.Info.Chat, &finalMsg)
 	if sendErr != nil {
 	} else {
 	}
