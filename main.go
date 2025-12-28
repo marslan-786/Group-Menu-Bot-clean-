@@ -31,7 +31,6 @@ var (
 	rdb              *redis.Client
 	ctx              = context.Background()
 	persistentUptime int64
-	groupCache       = make(map[string]*GroupSettings)
 	cacheMutex       sync.RWMutex
 	upgrader         = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
@@ -43,7 +42,6 @@ var (
 	clientsMutex    sync.RWMutex
 	activeClients   = make(map[string]*whatsmeow.Client)
 	globalClient    *whatsmeow.Client
-	ytCache         = make(map[string]YTSession)
 	ytDownloadCache = make(map[string]YTState)
 )
 
@@ -557,77 +555,6 @@ func SetGlobalClient(c *whatsmeow.Client) {
 }
 
 // ⚡ سیٹنگز حاصل کرنے کا فنکشن (اب بوٹ آئی ڈی بھی مانگے گا)
-func getGroupSettings(botID, chatID string) *GroupSettings {
-	// یونیک کی بنائیں (تاکہ ہر بوٹ کا ڈیٹا الگ رہے)
-	// Key Format: "923001234567:1203630...@g.us"
-	uniqueKey := botID + ":" + chatID
-
-	// 1. پہلے میموری (RAM) چیک کریں
-	cacheMutex.RLock()
-	s, exists := groupCache[uniqueKey]
-	cacheMutex.RUnlock()
-
-	if exists {
-		return s
-	}
-
-	// 2. اگر میموری میں نہیں ہے، تو Redis چیک کریں
-	if rdb != nil {
-		// Redis Key: "group_settings:92300...:12036..."
-		redisKey := "group_settings:" + uniqueKey
-		val, err := rdb.Get(ctx, redisKey).Result()
-		
-		if err == nil {
-			var loadedSettings GroupSettings
-			err := json.Unmarshal([]byte(val), &loadedSettings)
-			if err == nil {
-				// میموری میں اپڈیٹ کریں (Composite Key کے ساتھ)
-				cacheMutex.Lock()
-				groupCache[uniqueKey] = &loadedSettings
-				cacheMutex.Unlock()
-				
-				return &loadedSettings
-			}
-		}
-	}
-
-	// 3. اگر کہیں نہیں ہے تو ڈیفالٹ بنائیں
-	newSettings := &GroupSettings{
-		ChatID:         chatID,
-		Mode:           "public", 
-		Antilink:       false,
-		AntilinkAdmin:  true,     
-		AntilinkAction: "delete", 
-		Welcome:        false,
-		Warnings:       make(map[string]int),
-	}
-
-	return newSettings
-}
-
-// ⚡ سیٹنگز محفوظ کرنے کا فنکشن (بوٹ آئی ڈی کے ساتھ)
-func saveGroupSettings(botID string, s *GroupSettings) {
-	uniqueKey := botID + ":" + s.ChatID
-
-	// 1. میموری (RAM) میں اپڈیٹ کریں
-	cacheMutex.Lock()
-	groupCache[uniqueKey] = s
-	cacheMutex.Unlock()
-
-	// 2. Redis میں محفوظ کریں (الگ کی کے ساتھ)
-	if rdb != nil {
-		jsonData, err := json.Marshal(s)
-		if err == nil {
-			redisKey := "group_settings:" + uniqueKey
-			
-			// Redis میں سیو کریں (No Expiry)
-			err := rdb.Set(ctx, redisKey, jsonData, 0).Err()
-			if err != nil {
-				fmt.Printf("⚠️ [REDIS ERROR] Failed to save settings: %v\n", err)
-			}
-		}
-	}
-}
 
 func monitorNewSessions(container *sqlstore.Container) {
 	ticker := time.NewTicker(60 * time.Second)
