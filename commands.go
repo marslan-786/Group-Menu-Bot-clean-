@@ -3,245 +3,220 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/binary/proto"
-	// "go.mau.fi/whatsmeow/types" // (Uncomment if needed later)
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/protobuf/proto"
 )
 
-// 🛑 Basic Configuration
-const (
-	BOT_NAME   = "Impossible Bot"
-	OWNER_NAME = "Nothing Is Impossible"
-)
-
-// 🛡️ Anti-Spam Variables
-var RestrictedGroups = make(map[string]bool)
-var AuthorizedBots = make(map[string]bool)
-
-// =========================================================================
-// ⚡ MAIN PROCESSOR (Lightweight & Fast)
-// =========================================================================
-func processMessage(client *whatsmeow.Client, v *events.Message) {
-	// 1. Panic Recovery
-	defer recovery()
-
-	// 2. Timestamp Check (5 seconds max delay allowed)
-	if time.Since(v.Info.Timestamp) > 5*time.Second {
-		return
-	}
-
-	// 3. Text Extraction
-	bodyRaw := getText(v.Message)
-	if bodyRaw == "" {
-		return // Ignore empty messages
-	}
-	bodyClean := strings.TrimSpace(bodyRaw)
-
-	// 4. Fast Bot ID
-	rawBotID := client.Store.ID.User
-	botID := getCleanID(rawBotID)
-
-	// 5. Variables
-	chatID := v.Info.Chat.String()
-	// isGroup := v.Info.IsGroup // (Future use)
-
-	// 6. Spam Filter
-	if RestrictedGroups[chatID] && !AuthorizedBots[botID] {
-		return
-	}
-
-	// 7. Get Prefix (Default is '.')
-	prefix := getPrefix(botID)
-	if !strings.HasPrefix(bodyClean, prefix) {
-		return // Not a command
-	}
-
-	// 8. Command Parsing
-	msgWithoutPrefix := strings.TrimPrefix(bodyClean, prefix)
-	words := strings.Fields(msgWithoutPrefix)
-	if len(words) == 0 { return }
-
-	cmd := strings.ToLower(words[0])
-	fullArgs := strings.TrimSpace(strings.Join(words[1:], " ")) // Arguments for setprefix
-
-	fmt.Printf("🚀 [EXEC] Bot:%s | CMD:%s\n", botID, cmd)
-
-	// =====================================================================
-	// 🔥 COMMAND SWITCH (Background Execution)
-	// =====================================================================
+// ✅ Main Handler (Entry Point)
+func handler(client *whatsmeow.Client, rawEvt interface{}) {
+	// 🔥 "go func" کا مطلب ہے ہر ایونٹ الگ تھریڈ (Background Task) میں چلے گا۔
+	// یہ مین بوٹ کو کبھی بھی بلاک نہیں کرے گا۔ (The "Separate Tab" Logic)
 	go func() {
-		defer recovery()
+		switch evt := rawEvt.(type) {
 
-		switch cmd {
-		// ✅ MENU COMMAND
-		case "menu", "help", "list":
-			react(client, v.Info.Chat, v.Info.ID, "📜")
-			sendMenu(client, v, botID, prefix)
-		
-		// ✅ SET PREFIX COMMAND
-		case "setprefix", "prefix":
-			// صرف اونر استعمال کر سکے
-			if !isOwner(client, v.Info.Sender) {
-				replyMessage(client, v, "❌ Only Owner Command!")
-				return
-			}
-			if fullArgs == "" {
-				replyMessage(client, v, fmt.Sprintf("⚠️ Usage: %ssetprefix <symbol>\nExample: %ssetprefix !", prefix, prefix))
-				return
-			}
+		case *events.Message:
+			// 1. میسج کو Redis میں محفوظ کریں (بیک گراؤنڈ میں)
+			saveMessageToRedis(evt)
 			
-			// نیا پریفکس سیٹ کریں
-			updatePrefixDB(botID, fullArgs)
-			replyMessage(client, v, fmt.Sprintf("✅ Prefix updated to: [ %s ]", fullArgs))
+			// 2. کمانڈز پروسیس کریں
+			ProcessCommand(client, evt)
 
-		// 🛠️ باقی کمانڈز ہم بعد میں یہاں ایڈ کریں گے
+		case *events.MessageRevoke:
+			// 3. اینٹی ڈیلیٹ سسٹم
+			handleAntiDelete(client, evt)
 		}
 	}()
 }
 
-// =========================================================================
-// 📜 MENU FUNCTION
-// =========================================================================
-func sendMenu(client *whatsmeow.Client, v *events.Message, botID, p string) {
-	uptimeStr := getFormattedUptime()
-	currentMode := "PUBLIC" 
+// ✅ کمانڈ پروسیسر (اب یہ ڈائنامک پریفکس کو سپورٹ کرتا ہے)
+func ProcessCommand(client *whatsmeow.Client, evt *events.Message) {
+	// 1. میسج ٹیکسٹ نکالیں
+	txt := GetMessageContent(evt.Message)
+	if txt == "" {
+		return
+	}
 
-	menu := fmt.Sprintf(`╔══════════════════════╗
-║     ✨ %s ✨     
-╠══════════════════════╣
-║ 👋 *Assalam-o-Alaikum*
-║ 👑 *Owner:* %s              
-║ 🛡️ *Mode:* %s               
-║ ⏳ *Uptime:* %s             
-║ ⚡ *Prefix:* %s
-╠══════════════════════╣
-║ ╭──── SYSTEM ─────╮
-║ │ 🔸 *%ssetprefix* - Change Symbol
-║ │ 🔸 *%smenu* - Show this list
-║ ╰──────────────────╯
-╠══════════════════════╣
-║ © 2025 Nothing is Impossible 
-╚══════════════════════╝`,
-		BOT_NAME, OWNER_NAME, currentMode, uptimeStr, p,
-		p, p)
+	botID := getCleanID(client.Store.ID.User)
+	chatID := evt.Info.Chat.String()
 
-	// ✅ تصویر کے ساتھ بھیجیں
-	imgData, err := os.ReadFile("pic.png")
-	if err == nil {
-		uploadResp, err := client.Upload(context.Background(), imgData, whatsmeow.MediaImage)
-		if err == nil {
-			imgMsg := &waProto.Message{
-				ImageMessage: &waProto.ImageMessage{
-					Caption:       proto.String(menu),
-					URL:           proto.String(uploadResp.URL),
-					DirectPath:    proto.String(uploadResp.DirectPath),
-					MediaKey:      uploadResp.MediaKey,
-					Mimetype:      proto.String("image/png"),
-					FileEncSHA256: uploadResp.FileEncSHA256,
-					FileSHA256:    uploadResp.FileSHA256,
-					FileLength:    proto.Uint64(uint64(len(imgData))),
-				},
-			}
-			client.SendMessage(context.Background(), v.Info.Chat, imgMsg)
-			return
+	// 2. پریفکس چیک کریں (RAM سے)
+	prefixMutex.RLock()
+	currentPrefix, exists := botPrefixes[botID]
+	prefixMutex.RUnlock()
+
+	// اگر پریفکس سیٹ نہیں ہے تو ڈیفالٹ "." مان لیں
+	if !exists || currentPrefix == "" {
+		currentPrefix = "."
+	}
+
+	// 3. کیا میسج ہمارے پریفکس سے شروع ہو رہا ہے؟
+	if !strings.HasPrefix(txt, currentPrefix) {
+		return // اگر پریفکس نہیں ہے تو اگنور کریں
+	}
+
+	// 4. پریفکس ہٹا کر کمانڈ اور آرگیومنٹس الگ کریں
+	// مثال: "!delete on" (اگر پریفکس ! ہے) -> cmd="delete", args=["on"]
+	cleanTxt := strings.TrimPrefix(txt, currentPrefix)
+	parts := strings.Fields(cleanTxt)
+	
+	if len(parts) == 0 { return }
+
+	cmd := strings.ToLower(parts[0]) // کمانڈ (e.g., delete)
+	
+	// 🔥 SWITCH CASE - نئے فیچرز یہاں ایڈ ہوں گے
+	switch cmd {
+
+	case "setprefix":
+		// ✅ نیا فیچر: پریفکس چینج کمانڈ
+		handleSetPrefix(client, botID, chatID, evt, parts)
+
+	case "delete":
+		handleDeleteCommand(client, botID, chatID, evt, parts)
+
+	case "ping":
+		ReplyText(client, chatID, evt.Info.ID, fmt.Sprintf("🏓 *Pong!*\nCurrent Prefix: `%s`", currentPrefix))
+
+	case "menu":
+		ReplyText(client, chatID, evt.Info.ID, fmt.Sprintf("📜 *Control Panel:*\nPrefix: `%s`\n\n1. %sdelete on/off\n2. %ssetprefix [symbol]\n3. %sping", currentPrefix, currentPrefix, currentPrefix, currentPrefix))
+
+	default:
+		// نامعلوم کمانڈ (اگنور کریں)
+	}
+}
+
+// ✅ فیچر 1: SET PREFIX FUNCTION
+func handleSetPrefix(client *whatsmeow.Client, botID, chatID string, evt *events.Message, parts []string) {
+	// چیک: کیا یوزر نے نیا سمبل دیا ہے؟
+	if len(parts) < 2 {
+		ReplyText(client, chatID, evt.Info.ID, "⚠️ *Error:* Please provide a symbol.\nExample: `setprefix !` or `setprefix #`")
+		return
+	}
+
+	newPrefix := strings.TrimSpace(parts[1])
+
+	// زیادہ لمبا پریفکس نہ ہو (Max 1 character recommended, but allowed up to 3)
+	if len(newPrefix) > 3 {
+		ReplyText(client, chatID, evt.Info.ID, "❌ Prefix too long! Keep it short (e.g., `.`, `!`, `#`).")
+		return
+	}
+
+	// 1. Redis اور RAM میں اپڈیٹ کریں (یہ فنکشن main.go میں موجود ہے)
+	updatePrefixDB(botID, newPrefix)
+
+	ReplyText(client, chatID, evt.Info.ID, fmt.Sprintf("✅ *Prefix Updated!*\nNew Prefix: `%s`\nNow use: `%smenu`", newPrefix, newPrefix))
+}
+
+// ✅ فیچر 2: DELETE COMMAND (بغیر تبدیلی کے، بس اب یہ نئے پریفکس پر چلے گا)
+func handleDeleteCommand(client *whatsmeow.Client, botID, chatID string, evt *events.Message, parts []string) {
+	if len(parts) < 2 {
+		ReplyText(client, chatID, evt.Info.ID, "⚠️ *Use:* `delete on` or `delete off`")
+		return
+	}
+
+	subCmd := strings.ToLower(parts[1])
+	settings := getGroupSettings(botID, chatID)
+
+	switch subCmd {
+	case "on":
+		settings.Antidelete = true 
+		saveGroupSettings(botID, settings)
+		ReplyText(client, chatID, evt.Info.ID, "🛡️ *Anti-Delete Active!*")
+	case "off":
+		settings.Antidelete = false
+		saveGroupSettings(botID, settings)
+		ReplyText(client, chatID, evt.Info.ID, "💤 *Anti-Delete Disabled!*")
+	default:
+		ReplyText(client, chatID, evt.Info.ID, "❌ Use `on` or `off`")
+	}
+}
+
+// ✅ فیچر 3: ANTI-DELETE SYSTEM (وہی ہیوی کارڈ والا)
+func handleAntiDelete(client *whatsmeow.Client, evt *events.MessageRevoke) {
+	key := "msg_cache:" + evt.ID
+	val, err := rdb.Get(ctx, key).Bytes()
+	
+	if err != nil { return } // میسج نہیں ملا
+
+	originalMsg := &waE2E.Message{}
+	proto.Unmarshal(val, originalMsg)
+
+	chatID := evt.Chat.String()
+	botID := getCleanID(client.Store.ID.User)
+	settings := getGroupSettings(botID, chatID)
+	
+	if !settings.Antidelete { return }
+
+	senderJID := evt.Participant
+	if senderJID.IsEmpty() { senderJID = evt.Chat }
+	senderNum := strings.Split(senderJID.User, "@")[0]
+	msgTime := time.Now().Format("03:04 PM")
+
+	// 🎨 HEAVY CARD DESIGN
+	caption := fmt.Sprintf(
+		"█▀▀▀▀▀▀▀▀▀▀▀▀▀█\n"+
+		"█ 🚫 *ANTI-DELETE* █\n"+
+		"█▄▄▄▄▄▄▄▄▄▄▄▄▄█\n"+
+		"┃ 👤 @%s\n"+
+		"┃ 🕒 %s\n"+
+		"┃ 🗑️ *Recovered*\n"+
+		"╰━━━━━━━━━━━━━━⪼",
+		senderNum, msgTime,
+	)
+
+	forwardedMsg := &waE2E.Message{
+		Conversation:        originalMsg.Conversation,
+		ImageMessage:        originalMsg.ImageMessage,
+		VideoMessage:        originalMsg.VideoMessage,
+		AudioMessage:        originalMsg.AudioMessage,
+		ExtendedTextMessage: originalMsg.ExtendedTextMessage,
+		StickerMessage:      originalMsg.StickerMessage,
+	}
+
+	contextInfo := &waE2E.ContextInfo{
+		StanzaId:      proto.String(evt.ID),
+		Participant:   proto.String(senderJID.String()),
+		MentionedJid:  []string{senderJID.String()},
+		IsForwarded:   proto.Bool(true),
+	}
+
+	if forwardedMsg.ImageMessage != nil {
+		forwardedMsg.ImageMessage.Caption = proto.String(caption)
+		forwardedMsg.ImageMessage.ContextInfo = contextInfo
+	} else if forwardedMsg.VideoMessage != nil {
+		forwardedMsg.VideoMessage.Caption = proto.String(caption)
+		forwardedMsg.VideoMessage.ContextInfo = contextInfo
+	} else if forwardedMsg.StickerMessage != nil {
+		ReplyText(client, chatID, evt.ID, caption)
+		forwardedMsg.StickerMessage.ContextInfo = contextInfo
+	} else {
+		finalText := caption + "\n\n💬: " + GetMessageContent(originalMsg)
+		forwardedMsg.Conversation = nil
+		forwardedMsg.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
+			Text:        proto.String(finalText),
+			ContextInfo: contextInfo,
 		}
 	}
 
-	// اگر تصویر نہ ملے تو ٹیکسٹ بھیجیں
-	replyMessage(client, v, menu)
+	client.SendMessage(context.Background(), evt.Chat, forwardedMsg)
 }
 
-// =========================================================================
-// 🛠️ HELPER FUNCTIONS
-// =========================================================================
+// 🛠️ Helper Functions
+func saveMessageToRedis(evt *events.Message) {
+	if evt.Info.ID == "" || evt.Message == nil { return }
+	msgBytes, _ := proto.Marshal(evt.Message)
+	rdb.Set(ctx, "msg_cache:"+evt.Info.ID, msgBytes, 24*time.Hour)
+}
 
-func getText(msg *waProto.Message) string {
+func GetMessageContent(msg *waE2E.Message) string {
 	if msg == nil { return "" }
 	if msg.Conversation != nil { return *msg.Conversation }
 	if msg.ExtendedTextMessage != nil { return *msg.ExtendedTextMessage.Text }
 	if msg.ImageMessage != nil { return *msg.ImageMessage.Caption }
 	if msg.VideoMessage != nil { return *msg.VideoMessage.Caption }
 	return ""
-}
-
-func getCleanID(id string) string {
-	if strings.Contains(id, ":") {
-		id = strings.Split(id, ":")[0]
-	}
-	return strings.TrimSuffix(id, "@s.whatsapp.net")
-}
-
-// ✅ Default Prefix Logic
-func getPrefix(botID string) string {
-	prefixMutex.RLock()
-	p, ok := botPrefixes[botID]
-	prefixMutex.RUnlock()
-	if ok && p != "" { return p }
-	return "." // Default Prefix
-}
-
-// ✅ Update Prefix in Memory + Redis
-func updatePrefixDB(botID string, newPrefix string) {
-	// 1. Memory Update
-	prefixMutex.Lock()
-	botPrefixes[botID] = newPrefix
-	prefixMutex.Unlock()
-
-	// 2. Redis Update (if available)
-	if rdb != nil {
-		ctx := context.Background()
-		rdb.Set(ctx, "prefix:"+botID, newPrefix, 0)
-	}
-}
-
-func recovery() {
-	if r := recover(); r != nil {
-		fmt.Printf("⚠️ Panic Recovered: %v\n", r)
-	}
-}
-
-func react(client *whatsmeow.Client, chatID types.JID, msgID types.MessageID, emoji string) {
-	client.SendMessage(context.Background(), chatID, &waProto.Message{
-		ReactionMessage: &waProto.ReactionMessage{
-			Key: &waProto.MessageKey{
-				RemoteJid: proto.String(chatID.String()),
-				FromMe:    proto.Bool(false),
-				Id:        proto.String(msgID),
-			},
-			Text: proto.String(emoji),
-		},
-	})
-}
-
-func replyMessage(client *whatsmeow.Client, v *events.Message, text string) {
-	client.SendMessage(context.Background(), v.Info.Chat, &waProto.Message{
-		ExtendedTextMessage: &waProto.ExtendedTextMessage{
-			Text: proto.String(text),
-			ContextInfo: &waProto.ContextInfo{
-				StanzaID:      proto.String(v.Info.ID),
-				Participant:   proto.String(v.Info.Sender.String()),
-				QuotedMessage: v.Message,
-			},
-		},
-	})
-}
-
-func getFormattedUptime() string {
-	// (Ensure persistentUptime is accessible from main package)
-	duration := time.Duration(persistentUptime) * time.Second
-	days := int(duration.Hours()) / 24
-	hours := int(duration.Hours()) % 24
-	minutes := int(duration.Minutes()) % 60
-	return fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
-}
-
-func isOwner(client *whatsmeow.Client, sender types.JID) bool {
-	// Replace with your actual number
-	return strings.Contains(sender.User, "923001234567") 
 }
